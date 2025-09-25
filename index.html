@@ -1,98 +1,425 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Notes </title>
+    <title>Notes — Bilingual, Fast, and Interactive</title>
+    <meta name="description" content="A beautiful, fast, and interactive bilingual notes app. Add, search, sort, edit, and manage English–Indonesian word pairs with offline support.">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#fff"/>
-</head>
-<body class="bg-gray-100">
-    <nav class="bg-gray-800 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="#" class="flex items-center space-x-2">
-                <img src="images/letter-n.png" alt="Logo" class="h-8 w-8 rounded-full">
-                <span class="text-xl font-bold">Notes</span>
-            </a>
-        </div>
-    </nav>
-    <div class="container mx-auto mt-6 px-4">
-        <div class="bg-white rounded-lg shadow-xl p-4">
-            <form id="add-note-form" action="/add" method="post" class="flex items-center">
-                <input type="text" class="flex-grow appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-2 px-4 leading-tight focus:outline-none" placeholder="Write a new note..." name="note" required>
-                <button class="flex-shrink-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg" type="submit">
-                    Add
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div id="notes-container" class="container mx-auto px-4 mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        <!-- Notes will be added here dynamically -->
-    </div>
-
-    <button id="installBtn" style="display: none;" class="fixed bottom-8 right-8 bg-blue-500 hover:bg-blue-700 text-white font-bold w-20 h-20 rounded-full flex items-center justify-center shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-        </svg>
-    </button>
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-            .then((reg) => {
-                console.log('Service worker registered.', reg);
-            });
+      // Enable class-based dark mode for Tailwind CDN build
+      tailwind.config = { darkMode: 'class' };
+    </script>
+
+    <link rel="manifest" href="manifest.json">
+    <meta id="theme-color" name="theme-color" content="#ffffff" />
+    <link rel="icon" href="images/letter-n.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+      :root { --ring: 62 100% 67%; }
+      html { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+      /* Card flip */
+      .flip { perspective: 1000px; }
+      .flip-inner { transform-style: preserve-3d; transition: transform .6s; }
+      .flip[data-flipped="true"] .flip-inner { transform: rotateY(180deg); }
+      .flip-face { backface-visibility: hidden; }
+      .flip-back { transform: rotateY(180deg); }
+      /* Fancy gradient ring */
+      .brand-ring { box-shadow: 0 0 0 4px hsl(var(--ring) / .2); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/70 dark:border-gray-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="h-16 flex items-center justify-between">
+          <a href="#" class="flex items-center gap-3 group">
+            <img src="images/letter-n.png" alt="Notes logo" class="h-9 w-9 rounded-full brand-ring group-hover:scale-105 transition" />
+            <div>
+              <div class="text-xl font-bold tracking-tight">Notes</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">English ↔ Indonesian</div>
+            </div>
+          </a>
+          <div class="flex items-center gap-3">
+            <div class="relative hidden sm:block">
+              <input id="search-input" type="search" placeholder="Search notes... (/)" class="w-64 rounded-xl border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 px-4 py-2 pl-9 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <svg class="absolute left-2.5 top-2.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+            </div>
+            <button id="theme-toggle" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Toggle dark mode">
+              <svg id="theme-icon-sun" class="h-5 w-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0L17.95 7.05M7.05 16.95l-1.414 1.414"/></svg>
+              <svg id="theme-icon-moon" class="h-5 w-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+              <span class="hidden sm:inline">Theme</span>
+            </button>
+            <span id="count-badge" class="ml-1 inline-flex items-center rounded-full bg-blue-600 text-white text-xs font-semibold px-2 py-1">0</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="relative overflow-hidden">
+      <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-50 via-transparent to-purple-50 dark:from-blue-900/20 dark:to-purple-900/10"></div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <div class="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Capture bilingual notes with style</h1>
+            <p class="mt-3 text-gray-600 dark:text-gray-400">Add English–Indonesian pairs, search instantly, flip to reveal, edit inline, and keep everything offline.</p>
+            <ul class="mt-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>• Press / to search, N to add a new note, and D to toggle dark mode.</li>
+            </ul>
+          </div>
+          <div class="md:justify-self-end">
+            <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-800/70 p-4 shadow-sm">
+              <div class="text-xs uppercase tracking-wider text-gray-500 mb-2">Quick Add</div>
+              <form id="add-note-form" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label class="sr-only" for="english_word">English</label>
+                <input id="english_word" name="english_word" type="text" placeholder="English word" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <label class="sr-only" for="indonesian_word">Indonesian</label>
+                <input id="indonesian_word" name="indonesian_word" type="text" placeholder="Indonesian translation" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <div class="sm:col-span-2 flex items-center gap-2">
+                  <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2 font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add note
+                  </button>
+                  <button id="clear-all" type="button" class="ml-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Clear all</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+      <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div class="sm:hidden">
+          <input id="search-input-mobile" type="search" placeholder="Search notes... (/)" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 px-4 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <label for="sort-select" class="text-gray-500 dark:text-gray-400">Sort</label>
+          <select id="sort-select" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="a-z">A → Z (English)</option>
+            <option value="z-a">Z → A (English)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notes Grid -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-24">
+      <div id="empty-state" class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
+        No notes yet. Add your first English–Indonesian pair above.
+      </div>
+      <div id="notes-container" class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+    </main>
+
+    <!-- PWA Install Button -->
+    <button id="installBtn" style="display: none;" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold w-16 h-16 rounded-full flex items-center justify-center shadow-xl">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    </button>
+
+    <script>
+      // Service worker registration (preserved)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          console.log('Service worker registered.', reg);
+        });
+      }
+
+      // PWA install flow (preserved/enhanced)
+      let deferredPrompt;
+      const installBtn = document.getElementById('installBtn');
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'flex';
+      });
+      installBtn.addEventListener('click', () => {
+        installBtn.style.display = 'none';
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          console.log('Install choice:', choiceResult.outcome);
+          deferredPrompt = null;
+        });
+      });
+
+      // Elements
+      const addNoteForm = document.getElementById('add-note-form');
+      const englishWordInput = document.getElementById('english_word');
+      const indonesianWordInput = document.getElementById('indonesian_word');
+      const notesContainer = document.getElementById('notes-container');
+      const emptyState = document.getElementById('empty-state');
+      const searchDesktop = document.getElementById('search-input');
+      const searchMobile = document.getElementById('search-input-mobile');
+      const sortSelect = document.getElementById('sort-select');
+      const countBadge = document.getElementById('count-badge');
+      const themeToggle = document.getElementById('theme-toggle');
+      const themeMeta = document.getElementById('theme-color');
+      const clearAllBtn = document.getElementById('clear-all');
+
+      // State
+      let notes = [];
+      let filterText = '';
+
+      // Storage helpers
+      const NOTES_KEY = 'notes-data-v1';
+      const THEME_KEY = 'theme-preference';
+      function saveNotes() { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
+      function loadNotes() {
+        try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); }
+        catch { notes = []; }
+      }
+
+      // Theme helpers
+      function applyTheme(theme) {
+        const root = document.documentElement;
+        if (theme === 'dark') {
+          root.classList.add('dark');
+          themeMeta.setAttribute('content', '#111827'); // gray-900
+        } else {
+          root.classList.remove('dark');
+          themeMeta.setAttribute('content', '#ffffff');
         }
+      }
+      function initTheme() {
+        const stored = localStorage.getItem(THEME_KEY);
+        const preferDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (preferDark ? 'dark' : 'light');
+        applyTheme(theme);
+      }
 
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
+      // Rendering
+      function updateCount() { countBadge.textContent = String(notes.length); }
+      function setEmptyStateVisible(isVisible) { emptyState.style.display = isVisible ? '' : 'none'; }
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'flex'; // Changed to flex to center the icon
+      function renderNotes() {
+        // Filter and sort
+        const q = filterText.trim().toLowerCase();
+        let view = notes.filter(n => (
+          n.en.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)
+        ));
+        const sort = sortSelect.value;
+        view.sort((a,b) => {
+          if (sort === 'newest') return b.createdAt - a.createdAt;
+          if (sort === 'oldest') return a.createdAt - b.createdAt;
+          if (sort === 'a-z') return a.en.localeCompare(b.en);
+          if (sort === 'z-a') return b.en.localeCompare(a.en);
+          return 0;
         });
 
-        installBtn.addEventListener('click', (e) => {
-            installBtn.style.display = 'none';
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                } else {
-                    console.log('User dismissed the install prompt');
-                }
-                deferredPrompt = null;
-            });
+        notesContainer.innerHTML = '';
+        view.forEach(n => notesContainer.appendChild(createNoteElement(n)));
+        setEmptyStateVisible(view.length === 0);
+        updateCount();
+      }
+
+      // Card element factory
+      function createNoteElement(note) {
+        const card = document.createElement('div');
+        card.className = 'group relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition overflow-hidden flip';
+        card.setAttribute('data-id', note.id);
+        card.setAttribute('tabindex', '0');
+
+        const inner = document.createElement('div');
+        inner.className = 'flip-inner p-4 min-h-[120px]';
+
+        const front = document.createElement('div');
+        front.className = 'flip-face flex h-full flex-col justify-between';
+        front.innerHTML = `
+          <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.en)}</div>
+          <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip</div>
+        `;
+
+        const back = document.createElement('div');
+        back.className = 'flip-face flip-back flex h-full flex-col justify-between';
+        back.innerHTML = `
+          <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.id)}</div>
+          <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip back</div>
+        `;
+
+        inner.appendChild(front);
+        inner.appendChild(back);
+        card.appendChild(inner);
+
+        // Actions bar
+        const actions = document.createElement('div');
+        actions.className = 'absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition';
+        actions.innerHTML = `
+          <button class="btn-copy p-2 rounded-lg bg-white/80 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-900" title="Copy">
+            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6M8 16v2a2 2 0 002 2h6"/></svg>
+          </button>
+          <button class="btn-edit p-2 rounded-lg bg-white/80 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-900" title="Edit">
+            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4h2m2 0h2m-6 0H9m0 0H7m4 0v2m0 2v2m0-6v-2m0 10l-2 2m0 0l-2 2m4-4l2-2m0 0l2-2"/></svg>
+          </button>
+          <button class="btn-delete p-2 rounded-lg bg-red-50/80 dark:bg-red-900/20 border border-red-200/70 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30" title="Delete">
+            <svg class="h-4 w-4 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        `;
+        card.appendChild(actions);
+
+        // Flip on click or Enter/Space
+        card.addEventListener('click', (e) => {
+          const isButton = e.target.closest('button');
+          if (isButton) return;
+          toggleFlip(card);
+        });
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFlip(card); }
         });
 
-        const addNoteForm = document.getElementById('add-note-form');
-        const notesContainer = document.getElementById('notes-container');
-        const noteInput = addNoteForm.querySelector('input[name="note"]');
+        return card;
+      }
 
-        addNoteForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const noteText = noteInput.value.trim();
-            if (noteText !== '') {
-                createNoteElement(noteText);
-                noteInput.value = '';
-                noteInput.focus();
-            }
-        });
+      function toggleFlip(card) {
+        const flipped = card.getAttribute('data-flipped') === 'true';
+        card.setAttribute('data-flipped', flipped ? 'false' : 'true');
+      }
 
-        function createNoteElement(text) {
-            const noteElement = document.createElement('div');
-            noteElement.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow-md', 'flex', 'flex-col');
+      // Escape helper to prevent injection in templates
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+      }
 
-            const textElement = document.createElement('p');
-            textElement.classList.add('note-text', 'flex-grow');
-            textElement.textContent = text;
-
-            noteElement.appendChild(textElement);
-
-            notesContainer.prepend(noteElement);
+      // CRUD helpers
+      function addNote(en, id) {
+        const note = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2), en: en.trim(), id: id.trim(), createdAt: Date.now() };
+        notes.unshift(note);
+        saveNotes();
+        renderNotes();
+      }
+      function deleteNote(noteId) {
+        notes = notes.filter(n => n.id !== noteId);
+        saveNotes();
+        renderNotes();
+      }
+      function updateNote(noteId, en, id) {
+        const idx = notes.findIndex(n => n.id === noteId);
+        if (idx !== -1) {
+          notes[idx].en = en.trim();
+          notes[idx].id = id.trim();
+          saveNotes();
+          renderNotes();
         }
+      }
+
+      // Inline edit UI
+      function startInlineEdit(card) {
+        const id = card.getAttribute('data-id');
+        const n = notes.find(x => x.id === id);
+        if (!n) return;
+        card.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.className = 'p-4 space-y-2';
+        wrap.innerHTML = `
+          <input id="edit-en" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(n.en)}" />
+          <input id="edit-id" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(n.id)}" />
+          <div class="flex gap-2 justify-end pt-1">
+            <button class="btn-cancel rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
+            <button class="btn-save rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700">Save</button>
+          </div>
+        `;
+        card.classList.remove('flip');
+        card.appendChild(wrap);
+        wrap.querySelector('#edit-en').focus();
+      }
+
+      // Event wiring
+      addNoteForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const en = englishWordInput.value.trim();
+        const id = indonesianWordInput.value.trim();
+        if (!en || !id) return;
+        addNote(en, id);
+        englishWordInput.value = '';
+        indonesianWordInput.value = '';
+        englishWordInput.focus();
+      });
+
+      clearAllBtn.addEventListener('click', () => {
+        if (notes.length === 0) return;
+        if (confirm('Clear all notes? This cannot be undone.')) {
+          notes = [];
+          saveNotes();
+          renderNotes();
+        }
+      });
+
+      function onSearchInput(e) {
+        filterText = e.target.value || '';
+        renderNotes();
+      }
+      searchDesktop?.addEventListener('input', onSearchInput);
+      searchMobile?.addEventListener('input', onSearchInput);
+
+      sortSelect.addEventListener('change', renderNotes);
+
+      // Delegated actions on cards
+      notesContainer.addEventListener('click', (e) => {
+        const btnCopy = e.target.closest('.btn-copy');
+        const btnEdit = e.target.closest('.btn-edit');
+        const btnDelete = e.target.closest('.btn-delete');
+        const btnSave = e.target.closest('.btn-save');
+        const btnCancel = e.target.closest('.btn-cancel');
+        const card = e.target.closest('[data-id]');
+        if (!card) return;
+        const id = card.getAttribute('data-id');
+        const n = notes.find(x => x.id === id);
+        if (btnCopy && n) {
+          navigator.clipboard?.writeText(`${n.en} — ${n.id}`);
+        } else if (btnEdit) {
+          startInlineEdit(card);
+        } else if (btnDelete) {
+          if (confirm('Delete this note?')) deleteNote(id);
+        } else if (btnSave) {
+          const en = card.querySelector('#edit-en').value;
+          const idn = card.querySelector('#edit-id').value;
+          updateNote(id, en, idn);
+        } else if (btnCancel) {
+          renderNotes();
+        }
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.key === '/' && !(e.target instanceof HTMLInputElement)) {
+          e.preventDefault();
+          (searchDesktop || searchMobile).focus();
+        }
+        if (e.key.toLowerCase() === 'n' && !(e.target instanceof HTMLInputElement)) {
+          e.preventDefault();
+          englishWordInput.focus();
+        }
+        if (e.key.toLowerCase() === 'd' && !(e.target instanceof HTMLInputElement)) {
+          e.preventDefault();
+          const dark = document.documentElement.classList.contains('dark');
+          const next = dark ? 'light' : 'dark';
+          localStorage.setItem(THEME_KEY, next);
+          applyTheme(next);
+        }
+      });
+
+      // Theme toggle button
+      themeToggle.addEventListener('click', () => {
+        const dark = document.documentElement.classList.contains('dark');
+        const next = dark ? 'light' : 'dark';
+        localStorage.setItem(THEME_KEY, next);
+        applyTheme(next);
+      });
+
+      // Init
+      initTheme();
+      loadNotes();
+      renderNotes();
     </script>
 </body>
 </html>
