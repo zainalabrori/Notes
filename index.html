@@ -89,64 +89,10 @@
             textElement.classList.add('note-text', 'flex-grow');
             textElement.textContent = text;
 
-            const buttonContainer = document.createElement('div');
-            buttonContainer.classList.add('flex', 'space-x-2', 'mt-3');
-
-            const toIdButton = document.createElement('button');
-            toIdButton.classList.add('translate-btn', 'bg-gray-200', 'hover:bg-gray-300', 'text-gray-700', 'py-1', 'px-2', 'rounded-md', 'text-sm');
-            toIdButton.textContent = 'to Indonesian';
-            toIdButton.dataset.direction = 'en|id';
-
-            const toEnButton = document.createElement('button');
-            toEnButton.classList.add('translate-btn', 'bg-gray-200', 'hover:bg-gray-300', 'text-gray-700', 'py-1', 'px-2', 'rounded-md', 'text-sm');
-            toEnButton.textContent = 'to English';
-            toEnButton.dataset.direction = 'id|en';
-
-            buttonContainer.appendChild(toIdButton);
-            buttonContainer.appendChild(toEnButton);
-
-            const translationResult = document.createElement('p');
-            translationResult.classList.add('translation-result', 'mt-2', 'text-gray-500', 'text-sm', 'italic');
-
             noteElement.appendChild(textElement);
-            noteElement.appendChild(buttonContainer);
-            noteElement.appendChild(translationResult);
 
             notesContainer.prepend(noteElement);
         }
-
-        notesContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('translate-btn')) {
-                const noteElement = e.target.closest('.shadow-md');
-                const textToTranslate = noteElement.querySelector('.note-text').textContent;
-                const resultElement = noteElement.querySelector('.translation-result');
-                const translateButton = e.target;
-                const direction = translateButton.dataset.direction;
-
-                const buttons = noteElement.querySelectorAll('.translate-btn');
-                buttons.forEach(button => button.disabled = true);
-                translateButton.textContent = 'Translating...';
-
-                fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=${direction}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.responseData) {
-                            resultElement.textContent = data.responseData.translatedText;
-                        } else {
-                            resultElement.textContent = 'Translation not found.';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Translation error:', error);
-                        resultElement.textContent = 'Translation failed.';
-                    })
-                    .finally(() => {
-                        buttons.forEach(button => button.disabled = false);
-                        noteElement.querySelector('[data-direction="en|id"]').textContent = 'to Indonesian';
-                        noteElement.querySelector('[data-direction="id|en"]').textContent = 'to English';
-                    });
-            }
-        });
     </script>
 </body>
 </html>
