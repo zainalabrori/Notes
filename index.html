@@ -76,12 +76,18 @@
           <div class="md:justify-self-end">
             <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-800/70 p-4 shadow-sm">
               <div class="text-xs uppercase tracking-wider text-gray-500 mb-2">Quick Add</div>
-              <form id="add-note-form" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <label class="sr-only" for="english_word">English</label>
-                <input id="english_word" name="english_word" type="text" placeholder="English word" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <label class="sr-only" for="indonesian_word">Indonesian</label>
-                <input id="indonesian_word" name="indonesian_word" type="text" placeholder="Indonesian translation" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <div class="sm:col-span-2 flex items-center gap-2">
+              <form id="add-note-form" class="space-y-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label class="sr-only" for="english_word">English</label>
+                  <input id="english_word" name="english_word" type="text" placeholder="English word" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <label class="sr-only" for="indonesian_word">Indonesian</label>
+                  <input id="indonesian_word" name="indonesian_word" type="text" placeholder="Indonesian translation" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div>
+                  <label class="sr-only" for="tags_input">Tags</label>
+                  <input id="tags_input" name="tags_input" type="text" placeholder="Tags (optional, comma-separated)" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex items-center gap-2">
                   <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2 font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Add note
@@ -101,19 +107,59 @@
         <div class="sm:hidden">
           <input id="search-input-mobile" type="search" placeholder="Search notes... (/)" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 px-4 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div class="flex items-center gap-2 text-sm">
-          <label for="sort-select" class="text-gray-500 dark:text-gray-400">Sort</label>
-          <select id="sort-select" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none">
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="a-z">A → Z (English)</option>
-            <option value="z-a">Z → A (English)</option>
-          </select>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <label for="sort-select" class="text-gray-500 dark:text-gray-400">Sort</label>
+            <select id="sort-select" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="a-z">A → Z (English)</option>
+              <option value="z-a">Z → A (English)</option>
+            </select>
+            
+            <button id="favorites-filter" class="inline-flex items-center gap-1 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" data-active="false">
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+              Favorites
+            </button>
+            
+            <div class="relative">
+              <select id="tag-filter" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none text-sm">
+                <option value="">All Tags</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <button id="export-btn" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Export
+                <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div id="export-menu" class="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 hidden">
+                <button id="export-json" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-xl">JSON</button>
+                <button id="export-csv" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-xl">CSV</button>
+              </div>
+            </div>
+            <div class="relative">
+              <button id="import-btn" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+                Import
+                <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div id="import-menu" class="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 hidden">
+                <button id="import-json" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-xl">JSON</button>
+                <button id="import-csv" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-xl">CSV</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Notes Grid -->
+    <!-- Hidden file input for imports -->
+    <input type="file" id="file-input" accept=".json,.csv" style="display: none;">
+
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-24">
       <div id="empty-state" class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
         No notes yet. Add your first English–Indonesian pair above.
@@ -135,19 +181,33 @@
       const addNoteForm = document.getElementById('add-note-form');
       const englishWordInput = document.getElementById('english_word');
       const indonesianWordInput = document.getElementById('indonesian_word');
+      const tagsInput = document.getElementById('tags_input');
       const notesContainer = document.getElementById('notes-container');
       const emptyState = document.getElementById('empty-state');
       const searchDesktop = document.getElementById('search-input');
       const searchMobile = document.getElementById('search-input-mobile');
       const sortSelect = document.getElementById('sort-select');
+      const favoritesFilter = document.getElementById('favorites-filter');
+      const tagFilter = document.getElementById('tag-filter');
       const countBadge = document.getElementById('count-badge');
       const themeToggle = document.getElementById('theme-toggle');
       const themeMeta = document.getElementById('theme-color');
       const clearAllBtn = document.getElementById('clear-all');
+      const exportBtn = document.getElementById('export-btn');
+      const importBtn = document.getElementById('import-btn');
+      const exportMenu = document.getElementById('export-menu');
+      const importMenu = document.getElementById('import-menu');
+      const exportJsonBtn = document.getElementById('export-json');
+      const exportCsvBtn = document.getElementById('export-csv');
+      const importJsonBtn = document.getElementById('import-json');
+      const importCsvBtn = document.getElementById('import-csv');
+      const fileInput = document.getElementById('file-input');
 
       // State
       let notes = [];
       let filterText = '';
+      let showFavoritesOnly = false;
+      let selectedTag = '';
 
       // Storage helpers
       const NOTES_KEY = 'notes-data-v1';
@@ -180,12 +240,39 @@
       function updateCount() { countBadge.textContent = String(notes.length); }
       function setEmptyStateVisible(isVisible) { emptyState.style.display = isVisible ? '' : 'none'; }
 
+      function updateTagFilter() {
+        const allTags = [...new Set(notes.flatMap(note => note.tags || []))].sort();
+        const currentValue = tagFilter.value;
+        tagFilter.innerHTML = '<option value="">All Tags</option>';
+        allTags.forEach(tag => {
+          const option = document.createElement('option');
+          option.value = tag;
+          option.textContent = tag.charAt(0).toUpperCase() + tag.slice(1);
+          tagFilter.appendChild(option);
+        });
+        if (allTags.includes(currentValue)) {
+          tagFilter.value = currentValue;
+        }
+      }
+
       function renderNotes() {
         // Filter and sort
         const q = filterText.trim().toLowerCase();
-        let view = notes.filter(n => (
-          n.en.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)
-        ));
+        let view = notes.filter(n => {
+          // Text search
+          const matchesText = n.en.toLowerCase().includes(q) || 
+                             n.id.toLowerCase().includes(q) ||
+                             (n.tags && n.tags.some(tag => tag.toLowerCase().includes(q)));
+          
+          // Favorites filter
+          const matchesFavorites = !showFavoritesOnly || n.isFavorite;
+          
+          // Tag filter
+          const matchesTag = !selectedTag || (n.tags && n.tags.includes(selectedTag));
+          
+          return matchesText && matchesFavorites && matchesTag;
+        });
+        
         const sort = sortSelect.value;
         view.sort((a,b) => {
           if (sort === 'newest') return b.createdAt - a.createdAt;
@@ -213,15 +300,25 @@
 
         const front = document.createElement('div');
         front.className = 'flip-face flex h-full flex-col justify-between';
+        const frontTags = note.tags && note.tags.length > 0 ? 
+          `<div class="flex flex-wrap gap-1 mt-1">${note.tags.map(tag => `<span class="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
         front.innerHTML = `
-          <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.en)}</div>
+          <div>
+            <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.en)}</div>
+            ${frontTags}
+          </div>
           <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip</div>
         `;
 
         const back = document.createElement('div');
         back.className = 'flip-face flip-back flex h-full flex-col justify-between';
+        const backTags = note.tags && note.tags.length > 0 ? 
+          `<div class="flex flex-wrap gap-1 mt-1">${note.tags.map(tag => `<span class="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
         back.innerHTML = `
-          <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.id)}</div>
+          <div>
+            <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.id)}</div>
+            ${backTags}
+          </div>
           <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip back</div>
         `;
 
@@ -232,7 +329,11 @@
         // Actions bar
         const actions = document.createElement('div');
         actions.className = 'absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition';
+        const starFilled = note.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400';
         actions.innerHTML = `
+          <button class="btn-star p-2 rounded-lg bg-white/80 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-900" title="${note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+            <svg class="h-4 w-4 ${starFilled}" xmlns="http://www.w3.org/2000/svg" fill="${note.isFavorite ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+          </button>
           <button class="btn-copy p-2 rounded-lg bg-white/80 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-900" title="Copy">
             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6M8 16v2a2 2 0 002 2h6"/></svg>
           </button>
@@ -269,22 +370,41 @@
       }
 
       // CRUD helpers
-      function addNote(en, id) {
-        const note = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2), en: en.trim(), id: id.trim(), createdAt: Date.now() };
+      function addNote(en, id, tags = []) {
+        const note = { 
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2), 
+          en: en.trim(), 
+          id: id.trim(), 
+          tags: tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()),
+          isFavorite: false,
+          createdAt: Date.now() 
+        };
         notes.unshift(note);
         saveNotes();
         renderNotes();
+        updateTagFilter();
       }
       function deleteNote(noteId) {
         notes = notes.filter(n => n.id !== noteId);
         saveNotes();
         renderNotes();
       }
-      function updateNote(noteId, en, id) {
+      function updateNote(noteId, en, id, tags = []) {
         const idx = notes.findIndex(n => n.id === noteId);
         if (idx !== -1) {
           notes[idx].en = en.trim();
           notes[idx].id = id.trim();
+          notes[idx].tags = tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase());
+          saveNotes();
+          renderNotes();
+          updateTagFilter();
+        }
+      }
+      
+      function toggleFavorite(noteId) {
+        const idx = notes.findIndex(n => n.id === noteId);
+        if (idx !== -1) {
+          notes[idx].isFavorite = !notes[idx].isFavorite;
           saveNotes();
           renderNotes();
         }
@@ -301,6 +421,7 @@
         wrap.innerHTML = `
           <input id="edit-en" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(n.en)}" />
           <input id="edit-id" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(n.id)}" />
+          <input id="edit-tags" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Tags (comma-separated)" value="${escapeHtml((n.tags || []).join(', '))}" />
           <div class="flex gap-2 justify-end pt-1">
             <button class="btn-cancel rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
             <button class="btn-save rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700">Save</button>
@@ -316,10 +437,12 @@
         e.preventDefault();
         const en = englishWordInput.value.trim();
         const id = indonesianWordInput.value.trim();
+        const tags = tagsInput.value.trim() ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [];
         if (!en || !id) return;
-        addNote(en, id);
+        addNote(en, id, tags);
         englishWordInput.value = '';
         indonesianWordInput.value = '';
+        tagsInput.value = '';
         englishWordInput.focus();
       });
 
@@ -340,9 +463,25 @@
       searchMobile?.addEventListener('input', onSearchInput);
 
       sortSelect.addEventListener('change', renderNotes);
+      
+      // Favorites filter handler
+      favoritesFilter.addEventListener('click', () => {
+        showFavoritesOnly = !showFavoritesOnly;
+        favoritesFilter.setAttribute('data-active', showFavoritesOnly.toString());
+        favoritesFilter.style.backgroundColor = showFavoritesOnly ? 'rgb(59 130 246)' : '';
+        favoritesFilter.style.color = showFavoritesOnly ? 'white' : '';
+        renderNotes();
+      });
+      
+      // Tag filter handler
+      tagFilter.addEventListener('change', () => {
+        selectedTag = tagFilter.value;
+        renderNotes();
+      });
 
       // Delegated actions on cards
       notesContainer.addEventListener('click', (e) => {
+        const btnStar = e.target.closest('.btn-star');
         const btnCopy = e.target.closest('.btn-copy');
         const btnEdit = e.target.closest('.btn-edit');
         const btnDelete = e.target.closest('.btn-delete');
@@ -352,8 +491,11 @@
         if (!card) return;
         const id = card.getAttribute('data-id');
         const n = notes.find(x => x.id === id);
-        if (btnCopy && n) {
-          navigator.clipboard?.writeText(`${n.en} — ${n.id}`);
+        if (btnStar) {
+          toggleFavorite(id);
+        } else if (btnCopy && n) {
+          const tagsText = n.tags && n.tags.length > 0 ? ` [${n.tags.join(', ')}]` : '';
+          navigator.clipboard?.writeText(`${n.en} — ${n.id}${tagsText}`);
         } else if (btnEdit) {
           startInlineEdit(card);
         } else if (btnDelete) {
@@ -361,7 +503,9 @@
         } else if (btnSave) {
           const en = card.querySelector('#edit-en').value;
           const idn = card.querySelector('#edit-id').value;
-          updateNote(id, en, idn);
+          const tagsText = card.querySelector('#edit-tags').value;
+          const tags = tagsText.trim() ? tagsText.split(',').map(t => t.trim()).filter(t => t) : [];
+          updateNote(id, en, idn, tags);
         } else if (btnCancel) {
           renderNotes();
         }
@@ -394,9 +538,276 @@
         applyTheme(next);
       });
 
+      // Import/Export functionality
+      let currentImportType = '';
+
+      // Toggle dropdown menus
+      exportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exportMenu.classList.toggle('hidden');
+        importMenu.classList.add('hidden');
+      });
+
+      importBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        importMenu.classList.toggle('hidden');
+        exportMenu.classList.add('hidden');
+      });
+
+      // Close menus when clicking outside
+      document.addEventListener('click', () => {
+        exportMenu.classList.add('hidden');
+        importMenu.classList.add('hidden');
+      });
+
+      // Export functions
+      function exportAsJSON() {
+        const exportData = {
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          totalNotes: notes.length,
+          notes: notes.map(note => ({
+            id: note.id,
+            english: note.en,
+            indonesian: note.id,
+            tags: note.tags || [],
+            isFavorite: note.isFavorite || false,
+            createdAt: note.createdAt,
+            createdDate: new Date(note.createdAt).toISOString()
+          }))
+        };
+        
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `notes-backup-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        exportMenu.classList.add('hidden');
+      }
+
+      function exportAsCSV() {
+        const headers = ['English', 'Indonesian', 'Tags', 'Favorite', 'Created Date'];
+        const csvRows = [headers.join(',')];
+        
+        notes.forEach(note => {
+          const row = [
+            `"${note.en.replace(/"/g, '""')}"`,
+            `"${note.id.replace(/"/g, '""')}"`,
+            `"${(note.tags || []).join(', ').replace(/"/g, '""')}"`,
+            `"${note.isFavorite ? 'Yes' : 'No'}"`,
+            `"${new Date(note.createdAt).toISOString()}"`
+          ];
+          csvRows.push(row.join(','));
+        });
+        
+        const csvStr = csvRows.join('\n');
+        const dataBlob = new Blob([csvStr], { type: 'text/csv' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `notes-backup-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        
+        exportMenu.classList.add('hidden');
+      }
+
+      // Import functions
+      function importFromJSON(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const importData = JSON.parse(e.target.result);
+            let importNotes = [];
+            
+            // Handle different JSON structures
+            if (importData.notes && Array.isArray(importData.notes)) {
+              // New format with metadata
+              importNotes = importData.notes;
+            } else if (importData.vocabulary && Array.isArray(importData.vocabulary)) {
+              // Vocabulary format (like data.json)
+              importNotes = importData.vocabulary;
+            } else if (Array.isArray(importData)) {
+              // Direct array format
+              importNotes = importData;
+            } else {
+              throw new Error('Invalid JSON format. Expected notes, vocabulary array, or direct array.');
+            }
+            
+            let imported = 0;
+            importNotes.forEach(note => {
+              if (note.english && note.indonesian) {
+                // New format
+                const newNote = {
+                  id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+                  en: note.english.trim(),
+                  id: note.indonesian.trim(),
+                  tags: Array.isArray(note.tags) ? note.tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()) : [],
+                  isFavorite: note.isFavorite || false,
+                  createdAt: note.createdAt || Date.now()
+                };
+                notes.unshift(newNote);
+                imported++;
+              } else if (note.en && note.id) {
+                // Old format compatibility
+                const newNote = {
+                  id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+                  en: note.en.trim(),
+                  id: note.id.trim(),
+                  tags: Array.isArray(note.tags) ? note.tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()) : [],
+                  isFavorite: note.isFavorite || false,
+                  createdAt: note.createdAt || Date.now()
+                };
+                notes.unshift(newNote);
+                imported++;
+              }
+            });
+            
+            saveNotes();
+            updateTagFilter();
+            renderNotes();
+            alert(`Successfully imported ${imported} notes!`);
+          } catch (error) {
+            alert('Error importing JSON file: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function importFromCSV(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const csvText = e.target.result;
+            const lines = csvText.split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) {
+              throw new Error('CSV file must have at least a header and one data row');
+            }
+            
+            // Skip header row
+            const dataLines = lines.slice(1);
+            let imported = 0;
+            
+            dataLines.forEach(line => {
+              // Simple CSV parser (handles quoted fields)
+              const fields = [];
+              let current = '';
+              let inQuotes = false;
+              
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                  if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++; // Skip next quote
+                  } else {
+                    inQuotes = !inQuotes;
+                  }
+                } else if (char === ',' && !inQuotes) {
+                  fields.push(current);
+                  current = '';
+                } else {
+                  current += char;
+                }
+              }
+              fields.push(current); // Add last field
+              
+              if (fields.length >= 2 && fields[0].trim() && fields[1].trim()) {
+                const tagsField = fields[2] ? fields[2].trim() : '';
+                const tags = tagsField ? tagsField.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag) : [];
+                const isFavorite = fields[3] ? (fields[3].trim().toLowerCase() === 'yes' || fields[3].trim().toLowerCase() === 'true') : false;
+                const createdAt = fields[4] ? new Date(fields[4]).getTime() || Date.now() : Date.now();
+                
+                const newNote = {
+                  id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+                  en: fields[0].trim(),
+                  id: fields[1].trim(),
+                  tags: tags,
+                  isFavorite: isFavorite,
+                  createdAt: createdAt
+                };
+                notes.unshift(newNote);
+                imported++;
+              }
+            });
+            
+            saveNotes();
+            updateTagFilter();
+            renderNotes();
+            alert(`Successfully imported ${imported} notes from CSV!`);
+          } catch (error) {
+            alert('Error importing CSV file: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // Event handlers for export buttons
+      exportJsonBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notes.length === 0) {
+          alert('No notes to export!');
+          return;
+        }
+        exportAsJSON();
+      });
+
+      exportCsvBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notes.length === 0) {
+          alert('No notes to export!');
+          return;
+        }
+        exportAsCSV();
+      });
+
+      // Event handlers for import buttons
+      importJsonBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentImportType = 'json';
+        fileInput.accept = '.json';
+        fileInput.click();
+        importMenu.classList.add('hidden');
+      });
+
+      importCsvBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentImportType = 'csv';
+        fileInput.accept = '.csv';
+        fileInput.click();
+        importMenu.classList.add('hidden');
+      });
+
+      // File input change handler
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (currentImportType === 'json') {
+          if (!file.name.toLowerCase().endsWith('.json')) {
+            alert('Please select a JSON file');
+            return;
+          }
+          importFromJSON(file);
+        } else if (currentImportType === 'csv') {
+          if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Please select a CSV file');
+            return;
+          }
+          importFromCSV(file);
+        }
+        
+        // Reset file input
+        fileInput.value = '';
+      });
+
       // Init
       initTheme();
       loadNotes();
+      updateTagFilter();
       renderNotes();
     </script>
 </body>
