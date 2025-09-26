@@ -1,9 +1,9 @@
-const cacheName = 'notes-v1';
+const cacheName = 'notes-v2';
 const appShellFiles = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg'
+  '/images/letter-n.png'
 ];
 
 self.addEventListener('install', (e) => {
