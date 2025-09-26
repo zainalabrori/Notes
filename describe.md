@@ -117,13 +117,22 @@ Note: Service workers don’t activate on `file://` URLs; use a local server to 
 
 ## Extending the app (ideas)
 
-- Import/Export: JSON/CSV backup and restore
-- Favorites/tags: filter by tag or star
-- Spaced repetition: review sessions (e.g., SM-2)
+- Import/Export: JSON/CSV backup and restore ✔️
+- Favorites/tags: filter by tag or star ✔️
+- Spaced repetition: review sessions (e.g., SM-2) ✔️
 - TTS buttons: speak English/Indonesian via Web Speech API
 - Multi-language: support more language pairs
 - Cloud sync: optional backend/API if you need cross-device syncing
 - Build pipeline: self-hosted Tailwind build instead of CDN for production
+
+---
+
+## Spaced repetition (SM-2) — how to use
+
+- Click the Review button (or press R) to start a session with cards that are due now.
+- Flip to reveal the translation, then grade: Again, Hard, Good, or Easy.
+- Scheduling fields are stored per card in localStorage: ease, repetitions, interval (days), dueAt, lastReviewedAt, lapses.
+- Import/Export (JSON) includes these fields for backup.
 
 ---
 

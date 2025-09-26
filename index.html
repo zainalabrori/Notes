@@ -55,6 +55,11 @@
               <svg id="theme-icon-moon" class="h-5 w-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
               <span class="hidden sm:inline">Theme</span>
             </button>
+            <button id="review-btn" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm hover:bg-emerald-700" title="Start review (R)">
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span class="hidden sm:inline">Review</span>
+            </button>
+            <span id="due-badge" class="ml-1 inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200 text-xs font-semibold px-2 py-1">0 due</span>
             <span id="count-badge" class="ml-1 inline-flex items-center rounded-full bg-blue-600 text-white text-xs font-semibold px-2 py-1">0</span>
           </div>
         </div>
@@ -167,6 +172,39 @@
       <div id="notes-container" class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
     </main>
 
+    <!-- Review Modal -->
+    <div id="review-modal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="relative mx-auto mt-20 max-w-xl px-4">
+        <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
+          <div class="flex items-center justify-between px-4 pt-4">
+            <div id="review-progress" class="text-sm text-gray-500 dark:text-gray-400">0 / 0</div>
+            <button id="review-close" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Close</button>
+          </div>
+          <div class="px-4 pb-4">
+            <div id="review-card" class="mt-2 rounded-xl border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-800 flip" data-flipped="false">
+              <div class="flip-inner">
+                <div class="flip-face">
+                  <div id="review-front-en" class="text-2xl font-bold tracking-tight"></div>
+                </div>
+                <div class="flip-face flip-back">
+                  <div id="review-back-id" class="text-2xl font-bold tracking-tight"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-center">
+              <button id="review-show" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Show answer (Space)</button>
+            </div>
+            <div id="review-grades" class="mt-3 grid grid-cols-4 gap-2 hidden">
+              <button id="grade-again" class="rounded-xl bg-red-600 text-white px-3 py-2 text-sm hover:bg-red-700">Again</button>
+              <button id="grade-hard" class="rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Hard</button>
+              <button id="grade-good" class="rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700">Good</button>
+              <button id="grade-easy" class="rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Easy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
       // Service worker registration (preserved)
@@ -203,11 +241,29 @@
       const importCsvBtn = document.getElementById('import-csv');
       const fileInput = document.getElementById('file-input');
 
+      // Review elements
+      const reviewBtn = document.getElementById('review-btn');
+      const dueBadge = document.getElementById('due-badge');
+      const reviewModal = document.getElementById('review-modal');
+      const reviewProgress = document.getElementById('review-progress');
+      const reviewCard = document.getElementById('review-card');
+      const reviewFrontEn = document.getElementById('review-front-en');
+      const reviewBackId = document.getElementById('review-back-id');
+      const reviewShow = document.getElementById('review-show');
+      const reviewGrades = document.getElementById('review-grades');
+      const reviewClose = document.getElementById('review-close');
+      const gradeAgain = document.getElementById('grade-again');
+      const gradeHard = document.getElementById('grade-hard');
+      const gradeGood = document.getElementById('grade-good');
+      const gradeEasy = document.getElementById('grade-easy');
+
       // State
       let notes = [];
       let filterText = '';
       let showFavoritesOnly = false;
       let selectedTag = '';
+      let reviewQueue = [];
+      let reviewIndex = 0;
 
       // Storage helpers
       const NOTES_KEY = 'notes-data-v1';
@@ -216,6 +272,95 @@
       function loadNotes() {
         try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); }
         catch { notes = []; }
+      }
+
+      // Scheduling (SM-2) helpers
+      function ensureSchedule(n) {
+        if (n.ease == null) n.ease = 2.5;
+        if (n.repetitions == null) n.repetitions = 0;
+        if (n.interval == null) n.interval = 0; // in days
+        if (n.lapses == null) n.lapses = 0;
+        if (n.lastReviewedAt == null) n.lastReviewedAt = 0;
+        if (n.dueAt == null) n.dueAt = Date.now();
+      }
+      function ensureScheduleForAll() { notes.forEach(ensureSchedule); }
+      function getDueNotes() {
+        const now = Date.now();
+        return notes.filter(n => (n.dueAt || 0) <= now);
+      }
+      function updateDueBadge() {
+        if (!dueBadge) return;
+        const due = getDueNotes().length;
+        dueBadge.textContent = `${due} due`;
+        // Color hinting already styled; nothing else needed
+      }
+      function sm2Review(n, q) {
+        ensureSchedule(n);
+        // Update ease factor
+        let ease = n.ease;
+        ease = ease + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+        if (ease < 1.3) ease = 1.3;
+
+        if (q < 3) {
+          n.repetitions = 0;
+          n.lapses = (n.lapses || 0) + 1;
+          n.interval = 1; // schedule for tomorrow
+        } else {
+          n.repetitions = (n.repetitions || 0) + 1;
+          if (n.repetitions === 1) n.interval = 1;
+          else if (n.repetitions === 2) n.interval = 6;
+          else n.interval = Math.round((n.interval || 1) * ease);
+        }
+
+        n.ease = ease;
+        n.lastReviewedAt = Date.now();
+        n.dueAt = n.lastReviewedAt + n.interval * 86400000; // ms in a day
+      }
+
+      function startReview() {
+        reviewQueue = getDueNotes().sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
+        if (reviewQueue.length === 0) {
+          alert('No cards are due for review right now.');
+          return;
+        }
+        reviewIndex = 0;
+        showCurrentReviewCard();
+        reviewModal.classList.remove('hidden');
+      }
+      function closeReview() {
+        reviewModal.classList.add('hidden');
+        reviewQueue = [];
+        reviewIndex = 0;
+      }
+      function showCurrentReviewCard() {
+        const n = reviewQueue[reviewIndex];
+        if (!n) return;
+        reviewCard.setAttribute('data-flipped', 'false');
+        reviewFrontEn.textContent = n.en;
+        reviewBackId.textContent = n.id;
+        reviewProgress.textContent = `${reviewIndex + 1} / ${reviewQueue.length}`;
+        reviewShow.classList.remove('hidden');
+        reviewGrades.classList.add('hidden');
+      }
+      function revealAnswer() {
+        reviewCard.setAttribute('data-flipped', 'true');
+        reviewShow.classList.add('hidden');
+        reviewGrades.classList.remove('hidden');
+      }
+      function gradeAndNext(q) {
+        const n = reviewQueue[reviewIndex];
+        if (!n) return;
+        sm2Review(n, q);
+        saveNotes();
+        updateDueBadge();
+        reviewIndex++;
+        if (reviewIndex >= reviewQueue.length) {
+          reviewModal.classList.add('hidden');
+          alert('Review complete!');
+          renderNotes();
+          return;
+        }
+        showCurrentReviewCard();
       }
 
       // Theme helpers
@@ -377,12 +522,20 @@
           id: id.trim(), 
           tags: tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()),
           isFavorite: false,
-          createdAt: Date.now() 
+          createdAt: Date.now(),
+          // Scheduling defaults
+          ease: 2.5,
+          repetitions: 0,
+          interval: 0,
+          lapses: 0,
+          lastReviewedAt: 0,
+          dueAt: Date.now()
         };
         notes.unshift(note);
         saveNotes();
         renderNotes();
         updateTagFilter();
+        updateDueBadge();
       }
       function deleteNote(noteId) {
         notes = notes.filter(n => n.id !== noteId);
@@ -513,20 +666,40 @@
 
       // Keyboard shortcuts
       window.addEventListener('keydown', (e) => {
-        if (e.key === '/' && !(e.target instanceof HTMLInputElement)) {
+        const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+        if (e.key === '/' && !inInput) {
           e.preventDefault();
           (searchDesktop || searchMobile).focus();
         }
-        if (e.key.toLowerCase() === 'n' && !(e.target instanceof HTMLInputElement)) {
+        if (e.key.toLowerCase() === 'n' && !inInput) {
           e.preventDefault();
           englishWordInput.focus();
         }
-        if (e.key.toLowerCase() === 'd' && !(e.target instanceof HTMLInputElement)) {
+        if (e.key.toLowerCase() === 'd' && !inInput) {
           e.preventDefault();
           const dark = document.documentElement.classList.contains('dark');
           const next = dark ? 'light' : 'dark';
           localStorage.setItem(THEME_KEY, next);
           applyTheme(next);
+        }
+        if (e.key.toLowerCase() === 'r' && !inInput) {
+          e.preventDefault();
+          startReview();
+        }
+        // Review modal shortcuts
+        const modalOpen = !reviewModal.classList.contains('hidden');
+        if (modalOpen) {
+          if (e.key === ' ' && reviewShow && !reviewShow.classList.contains('hidden')) {
+            e.preventDefault();
+            revealAnswer();
+          } else if (['1','2','3','4'].includes(e.key) && !reviewGrades.classList.contains('hidden')) {
+            e.preventDefault();
+            const map = { '1': 1, '2': 3, '3': 4, '4': 5 };
+            gradeAndNext(map[e.key]);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeReview();
+          }
         }
       });
 
@@ -548,6 +721,15 @@
         importMenu.classList.add('hidden');
       });
 
+      // Review handlers
+      reviewBtn.addEventListener('click', startReview);
+      reviewClose.addEventListener('click', closeReview);
+      reviewShow.addEventListener('click', revealAnswer);
+      gradeAgain.addEventListener('click', () => gradeAndNext(1));
+      gradeHard.addEventListener('click', () => gradeAndNext(3));
+      gradeGood.addEventListener('click', () => gradeAndNext(4));
+      gradeEasy.addEventListener('click', () => gradeAndNext(5));
+
       importBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         importMenu.classList.toggle('hidden');
@@ -563,7 +745,7 @@
       // Export functions
       function exportAsJSON() {
         const exportData = {
-          version: '1.0',
+          version: '1.1',
           exportDate: new Date().toISOString(),
           totalNotes: notes.length,
           notes: notes.map(note => ({
@@ -573,7 +755,14 @@
             tags: note.tags || [],
             isFavorite: note.isFavorite || false,
             createdAt: note.createdAt,
-            createdDate: new Date(note.createdAt).toISOString()
+            createdDate: new Date(note.createdAt).toISOString(),
+            // Scheduling fields
+            dueAt: note.dueAt ?? null,
+            interval: note.interval ?? null,
+            repetitions: note.repetitions ?? null,
+            ease: note.ease ?? null,
+            lastReviewedAt: note.lastReviewedAt ?? null,
+            lapses: note.lapses ?? null
           }))
         };
         
@@ -646,7 +835,13 @@
                   id: note.indonesian.trim(),
                   tags: Array.isArray(note.tags) ? note.tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()) : [],
                   isFavorite: note.isFavorite || false,
-                  createdAt: note.createdAt || Date.now()
+                  createdAt: note.createdAt || Date.now(),
+                  ease: note.ease ?? 2.5,
+                  repetitions: note.repetitions ?? 0,
+                  interval: note.interval ?? 0,
+                  lapses: note.lapses ?? 0,
+                  lastReviewedAt: note.lastReviewedAt ?? 0,
+                  dueAt: note.dueAt ?? Date.now()
                 };
                 notes.unshift(newNote);
                 imported++;
@@ -658,7 +853,13 @@
                   id: note.id.trim(),
                   tags: Array.isArray(note.tags) ? note.tags.filter(tag => tag.trim()).map(tag => tag.trim().toLowerCase()) : [],
                   isFavorite: note.isFavorite || false,
-                  createdAt: note.createdAt || Date.now()
+                  createdAt: note.createdAt || Date.now(),
+                  ease: note.ease ?? 2.5,
+                  repetitions: note.repetitions ?? 0,
+                  interval: note.interval ?? 0,
+                  lapses: note.lapses ?? 0,
+                  lastReviewedAt: note.lastReviewedAt ?? 0,
+                  dueAt: note.dueAt ?? Date.now()
                 };
                 notes.unshift(newNote);
                 imported++;
@@ -807,8 +1008,10 @@
       // Init
       initTheme();
       loadNotes();
+      ensureScheduleForAll();
       updateTagFilter();
       renderNotes();
+      updateDueBadge();
     </script>
 </body>
 </html>
