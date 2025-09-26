@@ -121,12 +121,6 @@
       <div id="notes-container" class="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
     </main>
 
-    <!-- PWA Install Button -->
-    <button id="installBtn" style="display: none;" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold w-16 h-16 rounded-full flex items-center justify-center shadow-xl">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
-    </button>
 
     <script>
       // Service worker registration (preserved)
@@ -136,22 +130,6 @@
         });
       }
 
-      // PWA install flow (preserved/enhanced)
-      let deferredPrompt;
-      const installBtn = document.getElementById('installBtn');
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = 'flex';
-      });
-      installBtn.addEventListener('click', () => {
-        installBtn.style.display = 'none';
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          console.log('Install choice:', choiceResult.outcome);
-          deferredPrompt = null;
-        });
-      });
 
       // Elements
       const addNoteForm = document.getElementById('add-note-form');
