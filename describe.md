@@ -120,7 +120,7 @@ Note: Service workers don’t activate on `file://` URLs; use a local server to 
 - Import/Export: JSON/CSV backup and restore ✔️
 - Favorites/tags: filter by tag or star ✔️
 - Spaced repetition: review sessions (e.g., SM-2) ✔️
-- TTS buttons: speak English/Indonesian via Web Speech API
+- TTS buttons: speak English/Indonesian via Web Speech API ✔️
 - Multi-language: support more language pairs
 - Cloud sync: optional backend/API if you need cross-device syncing
 - Build pipeline: self-hosted Tailwind build instead of CDN for production
@@ -133,6 +133,16 @@ Note: Service workers don’t activate on `file://` URLs; use a local server to 
 - Flip to reveal the translation, then grade: Again, Hard, Good, or Easy.
 - Scheduling fields are stored per card in localStorage: ease, repetitions, interval (days), dueAt, lastReviewedAt, lapses.
 - Import/Export (JSON) includes these fields for backup.
+
+---
+
+## Text-to-Speech (TTS)
+
+- Di setiap kartu, klik ikon speaker untuk membacakan kata:
+  - EN: membacakan English
+  - ID: membacakan Indonesian
+- Di modal Review, tersedia tombol EN/ID dan tombol Stop.
+- Fitur ini menggunakan Web Speech API. Jika browser tidak mendukung, tombol TTS akan disembunyikan.
 
 ---
 

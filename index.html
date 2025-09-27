@@ -192,8 +192,19 @@
                 </div>
               </div>
             </div>
-            <div class="mt-4 flex justify-center">
+            <div class="mt-4 flex flex-col items-center gap-2">
               <button id="review-show" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Show answer (Space)</button>
+              <div class="flex items-center gap-2">
+                <button id="review-speak-en" class="tts-only inline-flex items-center gap-1 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" title="Speak English">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5l-7 7 7 7M19 5v14"/></svg>
+                  EN
+                </button>
+                <button id="review-speak-id" class="tts-only inline-flex items-center gap-1 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" title="Ucapkan Indonesia">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5l-7 7 7 7M19 5v14"/></svg>
+                  ID
+                </button>
+                <button id="review-stop-tts" class="tts-only inline-flex items-center gap-1 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" title="Stop suara">Stop</button>
+              </div>
             </div>
             <div id="review-grades" class="mt-3 grid grid-cols-4 gap-2 hidden">
               <button id="grade-again" class="rounded-xl bg-red-600 text-white px-3 py-2 text-sm hover:bg-red-700">Again</button>
@@ -208,7 +219,7 @@
 
     <script>
       // Service worker registration (preserved)
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('Service worker registered.', reg);
         });
@@ -256,6 +267,10 @@
       const gradeHard = document.getElementById('grade-hard');
       const gradeGood = document.getElementById('grade-good');
       const gradeEasy = document.getElementById('grade-easy');
+      // Review TTS buttons
+      const reviewSpeakEn = document.getElementById('review-speak-en');
+      const reviewSpeakId = document.getElementById('review-speak-id');
+      const reviewStopTts = document.getElementById('review-stop-tts');
 
       // State
       let notes = [];
@@ -273,6 +288,41 @@
         try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); }
         catch { notes = []; }
       }
+
+      // TTS helpers (Web Speech API)
+      const ttsSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+      let ttsVoices = [];
+      function refreshVoices() {
+        try { ttsVoices = window.speechSynthesis?.getVoices() || []; } catch { ttsVoices = []; }
+      }
+      if ('speechSynthesis' in window) {
+        refreshVoices();
+        window.speechSynthesis.onvoiceschanged = refreshVoices;
+      }
+      function pickVoice(langHint) {
+        const hint = (langHint || '').toLowerCase();
+        const primary = ttsVoices.find(v => (v.lang || '').toLowerCase().startsWith(hint));
+        if (primary) return primary;
+        if (hint.startsWith('id')) {
+          // fallback to any Indonesian-like voice
+          const idLike = ttsVoices.find(v => (v.lang || '').toLowerCase().includes('id'));
+          if (idLike) return idLike;
+        }
+        // fallback to English, else first voice
+        return ttsVoices.find(v => (v.lang || '').toLowerCase().startsWith('en')) || ttsVoices[0] || null;
+      }
+      function speak(text, langHint) {
+        if (!ttsSupported) { alert('Text-to-Speech tidak didukung di browser ini.'); return; }
+        if (!text) return;
+        const u = new SpeechSynthesisUtterance(String(text));
+        const voice = pickVoice(langHint);
+        if (voice) { u.voice = voice; u.lang = voice.lang; }
+        else { u.lang = langHint === 'id' ? 'id-ID' : 'en-US'; }
+        u.rate = 1; u.pitch = 1; u.volume = 1;
+        try { window.speechSynthesis.cancel(); } catch {}
+        window.speechSynthesis.speak(u);
+      }
+      function stopSpeak() { try { window.speechSynthesis?.cancel(); } catch {} }
 
       // Scheduling (SM-2) helpers
       function ensureSchedule(n) {
@@ -449,7 +499,12 @@
           `<div class="flex flex-wrap gap-1 mt-1">${note.tags.map(tag => `<span class="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
         front.innerHTML = `
           <div>
-            <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.en)}</div>
+            <div class="flex items-center gap-2">
+              <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.en)}</div>
+              <button class="btn-tts-en tts-only p-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" title="Speak English" aria-label="Speak English">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5l-7 7 7 7M19 5v14"/></svg>
+              </button>
+            </div>
             ${frontTags}
           </div>
           <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip</div>
@@ -461,7 +516,12 @@
           `<div class="flex flex-wrap gap-1 mt-1">${note.tags.map(tag => `<span class="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
         back.innerHTML = `
           <div>
-            <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.id)}</div>
+            <div class="flex items-center gap-2">
+              <div class="text-lg font-semibold tracking-tight">${escapeHtml(note.id)}</div>
+              <button class="btn-tts-id tts-only p-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" title="Ucapkan bahasa Indonesia" aria-label="Speak Indonesian">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5l-7 7 7 7M19 5v14"/></svg>
+              </button>
+            </div>
             ${backTags}
           </div>
           <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap to flip back</div>
@@ -640,6 +700,8 @@
         const btnDelete = e.target.closest('.btn-delete');
         const btnSave = e.target.closest('.btn-save');
         const btnCancel = e.target.closest('.btn-cancel');
+        const btnTtsEn = e.target.closest('.btn-tts-en');
+        const btnTtsId = e.target.closest('.btn-tts-id');
         const card = e.target.closest('[data-id]');
         if (!card) return;
         const id = card.getAttribute('data-id');
@@ -649,6 +711,10 @@
         } else if (btnCopy && n) {
           const tagsText = n.tags && n.tags.length > 0 ? ` [${n.tags.join(', ')}]` : '';
           navigator.clipboard?.writeText(`${n.en} — ${n.id}${tagsText}`);
+        } else if (btnTtsEn && n) {
+          speak(n.en, 'en');
+        } else if (btnTtsId && n) {
+          speak(n.id, 'id');
         } else if (btnEdit) {
           startInlineEdit(card);
         } else if (btnDelete) {
@@ -729,6 +795,16 @@
       gradeHard.addEventListener('click', () => gradeAndNext(3));
       gradeGood.addEventListener('click', () => gradeAndNext(4));
       gradeEasy.addEventListener('click', () => gradeAndNext(5));
+      // Review TTS handlers
+      reviewSpeakEn?.addEventListener('click', () => {
+        const n = reviewQueue[reviewIndex];
+        if (n) speak(n.en, 'en');
+      });
+      reviewSpeakId?.addEventListener('click', () => {
+        const n = reviewQueue[reviewIndex];
+        if (n) speak(n.id, 'id');
+      });
+      reviewStopTts?.addEventListener('click', stopSpeak);
 
       importBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1012,6 +1088,10 @@
       updateTagFilter();
       renderNotes();
       updateDueBadge();
+      // Hide TTS UI if unsupported
+      if (!ttsSupported) {
+        document.querySelectorAll('.tts-only').forEach(el => el.classList.add('hidden'));
+      }
     </script>
 </body>
 </html>
