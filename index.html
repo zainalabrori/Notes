@@ -158,8 +158,39 @@
                 <button id="import-csv" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-xl">CSV</button>
               </div>
             </div>
+            <div class="relative">
+              <button id="audio-btn" class="tts-only inline-flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M19.07 4.93a10 10 0 010 14.142M9 9l-5 4h4l5 4V5L8 9H4z"/></svg>
+                Audio
+                <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div id="audio-menu" class="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 hidden p-3">
+                <div class="space-y-2 text-sm">
+                  <label class="block">
+                    <span class="text-gray-500 dark:text-gray-400">Voice (English)</span>
+                    <select id="voice-en-select" class="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1"></select>
+                  </label>
+                  <label class="block">
+                    <span class="text-gray-500 dark:text-gray-400">Voice (Indonesian)</span>
+                    <select id="voice-id-select" class="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1"></select>
+                  </label>
+                  <label class="block">
+                    <span class="text-gray-500 dark:text-gray-400">Rate</span>
+                    <input id="tts-rate" type="range" min="0.5" max="2" step="0.1" class="w-full" />
+                  </label>
+                  <label class="block">
+                    <span class="text-gray-500 dark:text-gray-400">Pitch</span>
+                    <input id="tts-pitch" type="range" min="0" max="2" step="0.1" class="w-full" />
+                  </label>
+                  <label class="block">
+                    <span class="text-gray-500 dark:text-gray-400">Volume</span>
+                    <input id="tts-volume" type="range" min="0" max="1" step="0.1" class="w-full" />
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </div
       </div>
     </section>
 
@@ -312,6 +343,14 @@
       const importJsonBtn = document.getElementById('import-json');
       const importCsvBtn = document.getElementById('import-csv');
       const fileInput = document.getElementById('file-input');
+      // Audio settings elements
+      const audioBtn = document.getElementById('audio-btn');
+      const audioMenu = document.getElementById('audio-menu');
+      const voiceEnSelect = document.getElementById('voice-en-select');
+      const voiceIdSelect = document.getElementById('voice-id-select');
+      const ttsRateInput = document.getElementById('tts-rate');
+      const ttsPitchInput = document.getElementById('tts-pitch');
+      const ttsVolumeInput = document.getElementById('tts-volume');
 
       // Review elements
       const reviewBtn = document.getElementById('review-btn');
@@ -344,17 +383,61 @@
       // Storage helpers
       const NOTES_KEY = 'notes-data-v1';
       const THEME_KEY = 'theme-preference';
+      // TTS preference keys
+      const TTS_VOICE_EN_KEY = 'tts-voice-en';
+      const TTS_VOICE_ID_KEY = 'tts-voice-id';
+      const TTS_RATE_KEY = 'tts-rate';
+      const TTS_PITCH_KEY = 'tts-pitch';
+      const TTS_VOLUME_KEY = 'tts-volume';
       function saveNotes() { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
       function loadNotes() {
         try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); }
         catch { notes = []; }
       }
+      function getNumberPref(key, defVal) {
+        const v = parseFloat(localStorage.getItem(key));
+        return Number.isFinite(v) ? v : defVal;
+      }
 
       // TTS helpers (Web Speech API)
       const ttsSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
       let ttsVoices = [];
+      function populateVoiceSelects() {
+        if (!voiceEnSelect || !voiceIdSelect) return;
+        // Clear
+        voiceEnSelect.innerHTML = '';
+        voiceIdSelect.innerHTML = '';
+        const savedEn = localStorage.getItem(TTS_VOICE_EN_KEY) || '';
+        const savedId = localStorage.getItem(TTS_VOICE_ID_KEY) || '';
+        const makeOption = (v) => {
+          const opt = document.createElement('option');
+          opt.value = v.voiceURI || v.name || '';
+          opt.textContent = `${v.name || 'Unknown'} (${v.lang || 'n/a'})${v.localService ? '' : ' • remote'}`;
+          return opt;
+        };
+        const enVoices = ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+        const idVoices = ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith('id') || (v.lang || '').toLowerCase().includes('id'));
+        enVoices.forEach(v => voiceEnSelect.appendChild(makeOption(v)));
+        idVoices.forEach(v => voiceIdSelect.appendChild(makeOption(v)));
+        // Preselect saved
+        if (savedEn) {
+          const found = enVoices.find(v => v.voiceURI === savedEn || v.name === savedEn);
+          if (found) voiceEnSelect.value = found.voiceURI || found.name;
+        }
+        if (!voiceEnSelect.value && enVoices[0]) voiceEnSelect.value = enVoices[0].voiceURI || enVoices[0].name;
+        if (savedId) {
+          const found = idVoices.find(v => v.voiceURI === savedId || v.name === savedId);
+          if (found) voiceIdSelect.value = found.voiceURI || found.name;
+        }
+        if (!voiceIdSelect.value && idVoices[0]) voiceIdSelect.value = idVoices[0].voiceURI || idVoices[0].name;
+        // Initialize sliders with saved values
+        if (ttsRateInput) ttsRateInput.value = String(getNumberPref(TTS_RATE_KEY, 1));
+        if (ttsPitchInput) ttsPitchInput.value = String(getNumberPref(TTS_PITCH_KEY, 1));
+        if (ttsVolumeInput) ttsVolumeInput.value = String(getNumberPref(TTS_VOLUME_KEY, 1));
+      }
       function refreshVoices() {
         try { ttsVoices = window.speechSynthesis?.getVoices() || []; } catch { ttsVoices = []; }
+        try { populateVoiceSelects(); } catch {}
       }
       if ('speechSynthesis' in window) {
         refreshVoices();
@@ -362,6 +445,16 @@
       }
       function pickVoice(langHint) {
         const hint = (langHint || '').toLowerCase();
+        // Honor saved preference first
+        try {
+          const key = hint.startsWith('id') ? TTS_VOICE_ID_KEY : TTS_VOICE_EN_KEY;
+          const saved = localStorage.getItem(key);
+          if (saved) {
+            const preferred = ttsVoices.find(v => v.voiceURI === saved) || ttsVoices.find(v => v.name === saved);
+            if (preferred) return preferred;
+          }
+        } catch {}
+        // Then language-based selection
         const primary = ttsVoices.find(v => (v.lang || '').toLowerCase().startsWith(hint));
         if (primary) return primary;
         if (hint.startsWith('id')) {
@@ -372,6 +465,7 @@
         // fallback to English, else first voice
         return ttsVoices.find(v => (v.lang || '').toLowerCase().startsWith('en')) || ttsVoices[0] || null;
       }
+      function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
       function speak(text, langHint) {
         if (!ttsSupported) { alert('Text-to-Speech tidak didukung di browser ini.'); return; }
         if (!text) return;
@@ -379,10 +473,14 @@
         const voice = pickVoice(langHint);
         if (voice) { u.voice = voice; u.lang = voice.lang; }
         else { u.lang = langHint === 'id' ? 'id-ID' : 'en-US'; }
-        u.rate = 1; u.pitch = 1; u.volume = 1;
+        const rate = clamp(getNumberPref(TTS_RATE_KEY, 1), 0.1, 3);
+        const pitch = clamp(getNumberPref(TTS_PITCH_KEY, 1), 0, 2);
+        const volume = clamp(getNumberPref(TTS_VOLUME_KEY, 1), 0, 1);
+        u.rate = rate; u.pitch = pitch; u.volume = volume;
         try { window.speechSynthesis.cancel(); } catch {}
         window.speechSynthesis.speak(u);
       }
+
       function stopSpeak() { try { window.speechSynthesis?.cancel(); } catch {} }
 
       // Scheduling (SM-2) helpers
@@ -856,10 +954,36 @@
       // Import/Export functionality
       let currentImportType = '';
 
+      // Audio settings handlers
+      voiceEnSelect?.addEventListener('change', () => {
+        try { localStorage.setItem(TTS_VOICE_EN_KEY, voiceEnSelect.value || ''); } catch {}
+      });
+      voiceIdSelect?.addEventListener('change', () => {
+        try { localStorage.setItem(TTS_VOICE_ID_KEY, voiceIdSelect.value || ''); } catch {}
+      });
+      ttsRateInput?.addEventListener('input', () => {
+        try { localStorage.setItem(TTS_RATE_KEY, String(ttsRateInput.value)); } catch {}
+      });
+      ttsPitchInput?.addEventListener('input', () => {
+        try { localStorage.setItem(TTS_PITCH_KEY, String(ttsPitchInput.value)); } catch {}
+      });
+      ttsVolumeInput?.addEventListener('input', () => {
+        try { localStorage.setItem(TTS_VOLUME_KEY, String(ttsVolumeInput.value)); } catch {}
+      });
+
       // Toggle dropdown menus
       exportBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         exportMenu.classList.toggle('hidden');
+        importMenu.classList.add('hidden');
+        audioMenu?.classList.add('hidden');
+      });
+
+      // Audio menu toggle
+      audioBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        audioMenu?.classList.toggle('hidden');
+        exportMenu.classList.add('hidden');
         importMenu.classList.add('hidden');
       });
 
@@ -886,12 +1010,25 @@
         e.stopPropagation();
         importMenu.classList.toggle('hidden');
         exportMenu.classList.add('hidden');
+        audioMenu?.classList.add('hidden');
       });
 
-      // Close menus when clicking outside
-      document.addEventListener('click', () => {
-        exportMenu.classList.add('hidden');
-        importMenu.classList.add('hidden');
+      // Close menus when clicking outside (only if click is outside each menu and its button)
+      document.addEventListener('click', (e) => {
+        const t = e.target;
+        // Export menu
+        if (!exportBtn.contains(t) && !exportMenu.contains(t)) {
+          exportMenu.classList.add('hidden');
+        }
+        // Import menu
+        if (!importBtn.contains(t) && !importMenu.contains(t)) {
+          importMenu.classList.add('hidden');
+        }
+        // Audio menu
+        if (audioBtn && audioMenu && !audioBtn.contains(t) && !audioMenu.contains(t)) {
+          audioMenu.classList.add('hidden');
+        }
+        // Close any open action strips after any outside click
         document.querySelectorAll('.action-strip').forEach(el => el.classList.remove('show'));
       });
 
