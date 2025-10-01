@@ -281,6 +281,11 @@
       </div>
     </footer>
 
+    <style>
+      /* Make card action menu visible when toggled via click */
+      .action-strip.show { opacity: 1 !important; pointer-events: auto !important; }
+    </style>
+
     <script>
       // Service worker registration (preserved)
       if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
@@ -344,7 +349,7 @@
       let reviewQueue = [];
       let reviewIndex = 0;
 
-      // Storage helpers
+      // Storage helpers (migrated to IndexedDB)
       const NOTES_KEY = 'notes-data-v1';
       const THEME_KEY = 'theme-preference';
       // TTS preference keys
@@ -353,13 +358,102 @@
       const TTS_RATE_KEY = 'tts-rate';
       const TTS_PITCH_KEY = 'tts-pitch';
       const TTS_VOLUME_KEY = 'tts-volume';
-      function saveNotes() { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
+
+      const DB_NAME = 'notes-db';
+      const DB_VERSION = 1;
+      const STORE_NAME = 'kv';
+      const kvCache = new Map();
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onerror = () => reject(req.error);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+        });
+      }
+      function idbGet(key) {
+        return openDB().then(db => new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(key);
+          req.onsuccess = () => resolve(req.result ? req.result.value : null);
+          req.onerror = () => reject(req.error);
+        }));
+      }
+      function idbSet(key, value) {
+        return openDB().then(db => new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.put({ key, value });
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        }));
+      }
+
+      function setPref(key, value) {
+        kvCache.set(key, String(value));
+        return idbSet(key, String(value)).catch(() => {});
+      }
+      function getPrefSync(key, def = '') {
+        return kvCache.has(key) ? kvCache.get(key) : def;
+      }
+      async function initPrefs() {
+        const keys = [THEME_KEY, TTS_VOICE_EN_KEY, TTS_VOICE_ID_KEY, TTS_RATE_KEY, TTS_PITCH_KEY, TTS_VOLUME_KEY, NOTES_KEY];
+        for (const k of keys) {
+          try {
+            const v = await idbGet(k);
+            if (v != null) kvCache.set(k, v);
+          } catch (_) {}
+        }
+        try { populateVoiceSelects(); } catch (_) {}
+      }
+
+      function saveNotes() {
+        // Fire-and-forget to IndexedDB; update cache immediately
+        kvCache.set(NOTES_KEY, notes);
+        idbSet(NOTES_KEY, notes).catch(() => {});
+      }
       function loadNotes() {
-        try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); }
-        catch { notes = []; }
+        // Synchronous fast path: use cached value or migrate from localStorage
+        try {
+          if (kvCache.has(NOTES_KEY)) {
+            const cached = kvCache.get(NOTES_KEY);
+            notes = Array.isArray(cached) ? cached : [];
+          } else {
+            const legacy = localStorage.getItem(NOTES_KEY);
+            if (legacy) {
+              const parsed = JSON.parse(legacy);
+              if (Array.isArray(parsed)) {
+                notes = parsed;
+                kvCache.set(NOTES_KEY, parsed);
+                idbSet(NOTES_KEY, parsed).catch(() => {});
+              } else {
+                notes = [];
+              }
+            } else {
+              notes = [];
+            }
+          }
+        } catch { notes = []; }
+        // Async refresh from IndexedDB in case it's newer
+        idbGet(NOTES_KEY).then(v => {
+          if (Array.isArray(v)) {
+            notes = v;
+            ensureScheduleForAll();
+            updateTagFilter();
+            renderNotes();
+            updateDueBadge();
+          }
+        }).catch(() => {});
       }
       function getNumberPref(key, defVal) {
-        const v = parseFloat(localStorage.getItem(key));
+        const v = parseFloat(getPrefSync(key, ''));
         return Number.isFinite(v) ? v : defVal;
       }
 
@@ -371,8 +465,8 @@
         // Clear
         voiceEnSelect.innerHTML = '';
         voiceIdSelect.innerHTML = '';
-        const savedEn = localStorage.getItem(TTS_VOICE_EN_KEY) || '';
-        const savedId = localStorage.getItem(TTS_VOICE_ID_KEY) || '';
+        const savedEn = getPrefSync(TTS_VOICE_EN_KEY, '') || '';
+        const savedId = getPrefSync(TTS_VOICE_ID_KEY, '') || '';
         const makeOption = (v) => {
           const opt = document.createElement('option');
           opt.value = v.voiceURI || v.name || '';
@@ -412,7 +506,7 @@
         // Honor saved preference first
         try {
           const key = hint.startsWith('id') ? TTS_VOICE_ID_KEY : TTS_VOICE_EN_KEY;
-          const saved = localStorage.getItem(key);
+          const saved = getPrefSync(key, '');
           if (saved) {
             const preferred = ttsVoices.find(v => v.voiceURI === saved) || ttsVoices.find(v => v.name === saved);
             if (preferred) return preferred;
@@ -566,7 +660,7 @@
         }
       }
       function initTheme() {
-        const stored = localStorage.getItem(THEME_KEY);
+        const stored = getPrefSync(THEME_KEY, '');
         const preferDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (preferDark ? 'dark' : 'light');
         applyTheme(theme);
@@ -994,10 +1088,14 @@
         // toggle menu (mobile / click)
         if (btnMenu) {
           e.stopPropagation();
-          // close others first
-          document.querySelectorAll('.action-strip').forEach(el => el.classList.remove('show'));
           const strip = btnMenu.parentElement.querySelector('.action-strip');
-          if (strip) strip.classList.toggle('show');
+          const wasOpen = strip?.classList.contains('show');
+          // close all others first
+          document.querySelectorAll('.action-strip').forEach(el => el.classList.remove('show'));
+          // re-open only if it was previously closed
+          if (strip && !wasOpen) {
+            strip.classList.add('show');
+          }
           return;
         }
 
@@ -1063,7 +1161,7 @@
           e.preventDefault();
           const dark = document.documentElement.classList.contains('dark');
           const next = dark ? 'light' : 'dark';
-          localStorage.setItem(THEME_KEY, next);
+          setPref(THEME_KEY, next);
           applyTheme(next);
         }
         if (e.key.toLowerCase() === 'r' && !inInput) {
@@ -1091,7 +1189,7 @@
       themeToggle.addEventListener('click', () => {
         const dark = document.documentElement.classList.contains('dark');
         const next = dark ? 'light' : 'dark';
-        localStorage.setItem(THEME_KEY, next);
+        setPref(THEME_KEY, next);
         applyTheme(next);
       });
 
@@ -1472,16 +1570,19 @@
       });
 
       // Init
-      initTheme();
-      loadNotes();
-      ensureScheduleForAll();
-      updateTagFilter();
-      renderNotes();
-      updateDueBadge();
-      // Hide TTS UI if unsupported
-      if (!ttsSupported) {
-        document.querySelectorAll('.tts-only').forEach(el => el.classList.add('hidden'));
-      }
+      (async () => {
+        await initPrefs();
+        initTheme();
+        loadNotes();
+        ensureScheduleForAll();
+        updateTagFilter();
+        renderNotes();
+        updateDueBadge();
+        // Hide TTS UI if unsupported
+        if (!ttsSupported) {
+          document.querySelectorAll('.tts-only').forEach(el => el.classList.add('hidden'));
+        }
+      })();
     </script>
 </body>
 </html>
